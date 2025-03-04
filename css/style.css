@@ -1,0 +1,29 @@
+/* all p is going to be this distinction  */
+h1{color: rgb(26, 26, 27); 
+    font-size: xx-large;
+    text-align: center;
+}
+
+body {
+    background-color: #a3b2a6; /* Grey-blue background */
+}
+
+/* Give the map container has a height and width */
+#map1 {
+    height: 740px;  /* setting height */
+    width: 80%;    /* Establish map width */
+    margin-left: 10%; /* Add 15% margin on the left */
+    margin-right: 10%; /* Add 15% margin on the right */
+}
+
+#maptitle{
+    font-size: x-large;
+    text-align: left ;
+}
+
+#areatable {
+    height: 400px;  /* setting height */
+    width: 80%;    /* Establish map width */
+    margin-left: 10%; /* Add 15% margin on the left */
+    margin-right: 10%; /* Add 15% margin on the right */
+}
