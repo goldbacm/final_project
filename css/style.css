@@ -1,5 +1,5 @@
-/* all p is going to be this distinction  */
-h1{color: rgb(26, 26, 27); 
+h1 {
+    color: rgb(26, 26, 27); 
     font-size: xx-large;
     text-align: center;
 }
@@ -8,7 +8,20 @@ body {
     background-color: #a3b2a6; /* Grey-blue background */
 }
 
-/* Give the map container has a height and width */
+.image-container {
+    width: 80%;                /* Makes the container 80% of the page width */
+    margin-left: 10%;          /* Adds a 10% margin on the left */
+    margin-right: 10%;         /* Adds a 10% margin on the right */
+    text-align: center;       /* Centers the image horizontally */
+}
+
+.image-container img {
+    width: 100%;               /* Makes the image fill the container's width */
+    height: auto;              /* Keeps the image's aspect ratio intact */
+    max-width: 400px;          /* Optional: Limits image width to 600px */
+}
+
+/* Give the map container a height and width */
 #map1 {
     height: 740px;  /* setting height */
     width: 80%;    /* Establish map width */
@@ -16,14 +29,38 @@ body {
     margin-right: 10%; /* Add 15% margin on the right */
 }
 
-#maptitle{
+#maptitle {
     font-size: x-large;
-    text-align: left ;
+    text-align: center;
 }
 
 #areatable {
-    height: 400px;  /* setting height */
-    width: 80%;    /* Establish map width */
-    margin-left: 10%; /* Add 15% margin on the left */
-    margin-right: 10%; /* Add 15% margin on the right */
+    height: auto;  /* Allow the height to grow based on content */
+    width: 80%;    /* Establish table width */
+    margin-left: 10%; /* Add 10% margin on the left */
+    margin-right: 10%; /* Add 10% margin on the right */
+    border: 1px solid black;  /* Debugging: Add a border to see if the div is visible */
 }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid black;  /* Add a border to the table */
+}
+
+th, td {
+    padding: 8px;  /* Add padding to the table cells */
+    text-align: left;  /* Align text in the cells */
+}
+
+#solarpowertable {
+    height: auto;  /* Allow the height to grow based on content */
+    width: 80%;    /* Establish table width */
+    margin-left: 10%; /* Add 10% margin on the left */
+    margin-right: 10%; /* Add 10% margin on the right */
+    border: 1px solid black;  /* Debugging: Add a border to see if the div is visible */
+}
+
