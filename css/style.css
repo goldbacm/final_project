@@ -4,6 +4,12 @@ h1 {
     text-align: center;
 }
 
+h2 {
+    color: rgb(26, 26, 27); 
+    font-size: xx-large;
+    text-align: center;
+}
+
 body {
     background-color: #a3b2a6; /* Grey-blue background */
 }

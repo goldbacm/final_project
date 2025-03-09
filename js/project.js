@@ -1,3 +1,6 @@
+//data from https://globalsolaratlas.info/download/world
+//Sourced code from leaflet tutorials and old labs
+
 // creating map that centers on Oregon    
 var map = L.map('map1').setView([44.0, -120.5], 7); // Oregon coordinates
 
@@ -134,34 +137,6 @@ map.on('draw:deleted', function (e) {
     create_table(locations, areas, drawNumbers);
 });
 
-// Function to create and update the table
-function create_table(locations, areas, drawNumbers) {
-    var table = document.createElement("table");
-    table.style.width = "100%";
-    table.setAttribute("border", "1");
-
-    // Create the table header with an additional "Number" column
-    var headerRow = document.createElement("tr");
-    headerRow.insertAdjacentHTML("beforeend", "<th>Number</th><th>Location</th><th>Area (m²)</th>");
-    table.appendChild(headerRow);
-
-    // Loop to add a new row for each location, area, and draw number
-    for (var i = 0; i < locations.length; i++) {
-        var locationText = "Lat: " + locations[i][1].toFixed(4) + ", Lng: " + locations[i][0].toFixed(4);
-        var areaText = areas[i].toFixed(2);
-        var drawNumberText = drawNumbers[i];  // Add the draw number
-
-        // Add a new row with the draw number, location, and area
-        var add_row_html = "<tr><td>" + drawNumberText + "</td><td>" + locationText + "</td><td>" + areaText + "</td></tr>";
-        table.insertAdjacentHTML('beforeend', add_row_html);
-    }
-
-    // Append the table to the div
-    var div = document.getElementById("areatable");
-    div.innerHTML = ""; // Clear the div before adding a new table
-    div.appendChild(table);
-}
-
 // Function to create and update the table for locations and areas
 function create_table(locations, areas, drawNumbers) {
     var table = document.createElement("table");
@@ -199,9 +174,9 @@ function create_solar_table(locations, areas, drawNumbers) {
     table.style.width = "100%";
     table.setAttribute("border", "1");
 
-    // Create the table header with "Number", "Area (m²)", and "Solar Power (W)" columns
+    // Create the table header with "Number", "Area (m²)", "Average Daily Solar Irradiance", and "Solar Power (W)" columns
     var headerRow = document.createElement("tr");
-    headerRow.insertAdjacentHTML("beforeend", "<th>Number</th><th>Area (m²)</th><th>Solar Power (W)</th>");
+    headerRow.insertAdjacentHTML("beforeend", "<th>Number</th><th>Area (m²)</th><th>Average Daily Solar Irradiance (W/m²)</th><th>Solar Power (W)</th>");
     table.appendChild(headerRow);
 
     // Loop to add a new row for each location, area, and calculated power
@@ -209,13 +184,12 @@ function create_solar_table(locations, areas, drawNumbers) {
         var area = areas[i].toFixed(2);  // Area for solar power calculation
         var drawNumberText = drawNumbers[i];  // Draw number
 
-        // Calculate solar power for the given area
-        var efficiency = 0.20;  // Example: 20% efficiency
+        // Default solar irradiance for illustration
         var solar_irradiance = 1000;  // Example: Solar irradiance in W/m²
-        var power = calculate_power(areas[i], efficiency, solar_irradiance);  // Calculate the power in watts
+        var power = calculate_power(areas[i], 0.20, solar_irradiance);  // Calculate the power in watts
 
         // Add a new row with the draw number, area, and calculated solar power
-        var add_row_html = "<tr><td>" + drawNumberText + "</td><td>" + area + "</td><td>" + power.toFixed(2) + "</td></tr>";
+        var add_row_html = "<tr><td>" + drawNumberText + "</td><td>" + area + "</td><td>" + solar_irradiance + "</td><td>" + power.toFixed(2) + "</td></tr>";
         table.insertAdjacentHTML('beforeend', add_row_html);
     }
 
@@ -225,137 +199,93 @@ function create_solar_table(locations, areas, drawNumbers) {
     div.appendChild(table);
 }
 
-// Calculate solar potential 
+// Function to calculate solar power
 function calculate_power(area, efficiency, solar_irradiance) {
-    let power = area * efficiency * solar_irradiance
+    let power = area * efficiency * solar_irradiance;
     return power;
-}         
+}
+
+// Function to get solar irradiance for the given coordinates from the GeoJSON data
+function get_solar_irradiance_from_geojson(geojsonData, latitude, longitude) {
+    // Loop through the features in the GeoJSON data to find a match for the coordinates
+    for (let feature of geojsonData.features) {
+        const featureGeometry = feature.geometry;
+        const featureLatitude = latitude;
+        const featureLongitude = longitude;
+
+        // For each feature, we have coordinates in a Polygon format
+        const polygon = featureGeometry.coordinates[0];  // First ring of the polygon
+
+        // Check if the point is inside the polygon using a simple ray-casting algorithm
+        if (isPointInPolygon([featureLongitude, featureLatitude], polygon)) {
+            return feature.properties.VALUE;  // Return the solar irradiance value
+        }
+    }
+    return null;  // Return null if no matching coordinates are found
+}
+
+// Ray-casting algorithm to check if a point is inside a polygon
+function isPointInPolygon(point, polygon) {
+    let x = point[0], y = point[1];
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        let xi = polygon[i][0], yi = polygon[i][1];
+        let xj = polygon[j][0], yj = polygon[j][1];
+
+        let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
 
 // Function to get the area from the table and calculate solar power
 function calculate_solar_power_from_table() {
     var table = document.querySelector("#areatable table"); // Get the table
     var rows = table.querySelectorAll("tr"); // Get all rows of the table
 
-    // Loop through the rows and calculate solar power for each area
-    for (var i = 1; i < rows.length; i++) {  // Start from 1 to skip the header row
-        var cells = rows[i].getElementsByTagName("td"); // Get the cells in the row
-        var area = parseFloat(cells[2].innerText);  // Get the area from the 3rd column (index 2)
-        
-        // Example: You can define efficiency and solar irradiance based on your needs
-        var efficiency = 0.20;  // 20% efficiency 
-        var solar_irradiance = 1000;  // Solar irradiance in W/m² 
+    // Load the GHI GeoJSON data using fetch
+    fetch('data/GHI.geojson')  // Replace with the correct path to your GeoJSON file
+        .then(response => response.json())  // Parse the JSON data from the response
+        .then(geojsonData => {
+            L.geoJSON(geojsonData).addTo(map1);  // Add the GeoJSON data to the map (optional)
 
-        var power = calculate_power(area, efficiency, solar_irradiance);  // Call the power calculation function
-        console.log("Solar power for draw " + cells[0].innerText + ": " + power + " W");
-    }
+            // Loop through the rows and calculate solar power for each area
+            for (var i = 1; i < rows.length; i++) {  // Start from 1 to skip the header row
+                var cells = rows[i].getElementsByTagName("td"); // Get the cells in the row
+                var area = parseFloat(cells[2].innerText);  // Get the area from the 3rd column (index 2)
+                
+                // Extract coordinates (assuming they are in the first and second columns of the table)
+                var latitude = parseFloat(cells[0].innerText);  // Latitude from the 1st column (index 0)
+                var longitude = parseFloat(cells[1].innerText); // Longitude from the 2nd column (index 1)
+
+                // Get the solar irradiance for the current coordinates from the GeoJSON data
+                var solar_irradiance = get_solar_irradiance_from_geojson(geojsonData, latitude, longitude);
+
+                // If we can't find the solar irradiance, log a warning and leave it empty or null
+                if (solar_irradiance === null) {
+                    console.warn(`No solar irradiance data found for coordinates: (${latitude}, ${longitude}).`);
+                    solar_irradiance = 'N/A';  // You can set it to a placeholder value like 'N/A'
+                }
+
+                // Define efficiency
+                var efficiency = 0.20;  // 20% efficiency 
+
+                // If solar irradiance is not available, power calculation is skipped, or set to zero
+                var power = solar_irradiance !== 'N/A' ? calculate_power(area, efficiency, solar_irradiance) : 0;  
+
+                // Create new cells for solar irradiance and solar power
+                var irradianceCell = document.createElement("td");
+                irradianceCell.innerText = solar_irradiance === 'N/A' ? 'N/A' : solar_irradiance + " W/m²";  // Display the irradiance
+
+                var powerCell = document.createElement("td");
+                powerCell.innerText = power === 0 ? 'N/A' : power + " W";  // Display the power
+
+                // Append the new cells to the row
+                rows[i].appendChild(irradianceCell);
+                rows[i].appendChild(powerCell);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading GHI.geojson:', error);  // Handle any errors that occur during the fetch
+        });
 }
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-////////////////////////////////////////////////////
-// //instead of a constant Solar irradiance need to get kilowatts per year but also break down by month to print out table
-// // Function to fetch solar irradiance data from NASA's POWER API
-// async function fetch_solar_data(latitude, longitude, startDate, endDate) {
-//     const apiUrl = `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=SOLARRAD&community=RE&longitude=${longitude}&latitude=${latitude}&start=${startDate}&end=${endDate}&format=JSON`;
-
-//     try {
-//         let response = await fetch(apiUrl);
-//         let data = await response.json();
-
-//         // Check if data was returned successfully
-//         if (data && data.properties && data.properties.parameter && data.properties.parameter.SOLARRAD) {
-//             return data.properties.parameter.SOLARRAD;
-//         } else {
-//             console.error("Data not found or error fetching data.");
-//             return [];
-//         }
-//     } catch (error) {
-//         console.error("Error fetching solar data: ", error);
-//         return [];
-//     }
-// }
-
-// // Function to calculate monthly solar energy using the irradiance data
-// function calculate_monthly_energy(area, efficiency, dailyIrradiance) {
-//     const monthlyEnergy = Array(12).fill(0); // Array to store monthly energy values
-
-//     for (let i = 0; i < 365; i++) { // Loop through daily data
-//         const dayOfYear = i; // Day number (0 to 364)
-
-//         // Determine the month (0-based, so January = 0, December = 11)
-//         const month = new Date(2024, 0, 1 + dayOfYear).getMonth(); // Adjust year to 2024
-
-//         // Calculate energy for the day (in kWh) for the given area and efficiency
-//         const dailyEnergy = area * efficiency * dailyIrradiance[dayOfYear] * 1 / 1000; // Convert from W/m²/day to kWh
-
-//         // Add energy for the specific month
-//         monthlyEnergy[month] += dailyEnergy;
-//     }
-
-//     return monthlyEnergy;
-// }
-
-// // Example usage of the functions
-// async function calculate_solar_power() {
-//     const latitude = 44.0; // Example latitude for Oregon
-//     const longitude = -120.5; // Example longitude for Oregon
-//     const startDate = "20240101"; // Start of 2024
-//     const endDate = "20241231"; // End of 2024
-
-//     // Fetch solar irradiance data from NASA POWER API for 2024
-//     const dailyIrradiance = await fetch_solar_data(latitude, longitude, startDate, endDate);
-
-//     if (dailyIrradiance.length === 0) {
-//         console.error("Failed to fetch irradiance data.");
-//         return;
-//     }
-
-//     // Example area (in square meters) and efficiency (20%)
-//     const area = 100; // m² (example: 100 m² of solar panels)
-//     const efficiency = 0.20; // 20% efficiency
-
-//     // Calculate the monthly energy produced based on solar irradiance
-//     const monthlyEnergy = calculate_monthly_energy(area, efficiency, dailyIrradiance);
-
-//     // Display results in the table
-//     create_solar_table(monthlyEnergy);
-// }
-
-// // Function to display the results in a table
-// function create_solar_table(monthlyEnergy) {
-//     const div = document.getElementById("solarpowertable");
-
-//     if (!div) {
-//         console.error("Error: div with id 'solarpowertable' not found.");
-//         return; // Exit the function if the div doesn't exist
-//     }
-
-//     let table = document.createElement("table");
-//     table.style.width = "100%";
-//     table.setAttribute("border", "1");
-
-//     // Create the table header with monthly energy and total energy
-//     let headerRow = document.createElement("tr");
-//     headerRow.insertAdjacentHTML("beforeend", "<th>Month</th><th>Monthly Solar Energy (kWh)</th>");
-//     table.appendChild(headerRow);
-
-//     // Loop through the months and add them to the table
-//     let totalEnergy = 0;
-//     for (let i = 0; i < 12; i++) {
-//         let monthName = new Date(2024, i, 1).toLocaleString('default', { month: 'long' });
-//         let energy = monthlyEnergy[i].toFixed(2);
-//         totalEnergy += monthlyEnergy[i];
-
-//         let rowHtml = `<tr><td>${monthName}</td><td>${energy}</td></tr>`;
-//         table.insertAdjacentHTML('beforeend', rowHtml);
-//     }
-
-//     // Add total energy row
-//     table.insertAdjacentHTML('beforeend', `<tr><td><strong>Total</strong></td><td><strong>${totalEnergy.toFixed(2)}</strong></td></tr>`);
-
-//     // Append the table to the div
-//     div.innerHTML = ""; // Clear the div before adding a new table
-//     div.appendChild(table);
-// }
-
-// // Call the function to calculate and display solar power data
-// calculate_solar_power();
